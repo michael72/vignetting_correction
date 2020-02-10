@@ -10,7 +10,7 @@ class Poly;
 
 class VignettingCorrection : public imgalg::ImageAlgo {
 public:
-  VignettingCorrection(ImgViewOrig const &input_image);
+  VignettingCorrection(ImgOrig const &img);
   ~VignettingCorrection();
 
   ImgOrig correct();

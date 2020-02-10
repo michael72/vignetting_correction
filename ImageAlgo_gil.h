@@ -39,11 +39,6 @@ public:
   }
 
   template <typename P, typename V>
-  static P *row_begin_mut(V &img, int const row) {
-    return img.row_begin(row);
-  }
-
-  template <typename P, typename V>
   static P const *row_begin(V const &img, int const row) {
     return img.row_begin(row);
   }

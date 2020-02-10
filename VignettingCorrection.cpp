@@ -127,9 +127,9 @@ bool Poly::is_increasing() const {
   return false;
 }
 
-VignettingCorrection::VignettingCorrection(ImgViewOrig const &input_image)
-    : input_image_orig_(input_image),
-      input_image_(scaled_down(input_image, ScaleFactor)) {}
+VignettingCorrection::VignettingCorrection(ImgOrig const &input_image)
+    : input_image_orig_(const_view(input_image)),
+      input_image_(scaled_down(input_image_orig_, ScaleFactor)) {}
 
 VignettingCorrection::~VignettingCorrection() {}
 
@@ -352,7 +352,14 @@ int main(int argc, char *argv[]) {
 
   ImageAlgo::load_image(orig, path);
 
-  vgncorr::VignettingCorrection corr(const_view(orig));
+#ifdef USE_OPENCV
+  // TODO support colored images
+  cv::Mat gray(orig.size(), CV_8UC1);
+  cv::cvtColor(orig, gray, cv::COLOR_BGR2GRAY);
+  vgncorr::VignettingCorrection corr(gray);
+#else
+  vgncorr::VignettingCorrection corr(orig);
+#endif
   auto const out = corr.correct();
   auto out_path = path;
   out_path = out_path.replace(path.find("."), 1, "_corr.");

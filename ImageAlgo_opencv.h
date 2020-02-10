@@ -7,7 +7,8 @@
 
 namespace imgalg {
 
-template <typename Base> class ImageAlgoDerived : public Base {
+class ImageAlgoBase {
+public:
   using Point = cv::Point2i;
   using ImgOrig = cv::Mat;
   using ImgViewOrig = cv::Mat;
@@ -27,14 +28,21 @@ template <typename Base> class ImageAlgoDerived : public Base {
                cv::INTER_LINEAR_EXACT);
     return result;
   }
-  template <typename P, typename V>
-  static P *_row_begin(V &img, int const row) {
+  template <typename P, typename V> static P *row_begin(V &img, int const row) {
     return img.ptr<P>(row);
   }
 
   template <typename P, typename V>
-  static P const *_row_begin(V const &img, int const row) {
+  static P const *row_begin(V const &img, int const row) {
     return img.ptr<P>(row);
+  }
+
+  static void load_image(ImgOrig &orig, std::string const &path) {
+    orig = cv::imread(path, cv::IMREAD_UNCHANGED);
+  }
+
+  static void save_image(ImgOrig const &img, std::string const &path) {
+    cv::imwrite(path, img);
   }
 };
 } // namespace imgalg
