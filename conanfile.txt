@@ -1,0 +1,7 @@
+[requires]
+libpng/1.6.37
+libjpeg/9d
+boost/1.72.0
+
+[generators]
+cmake

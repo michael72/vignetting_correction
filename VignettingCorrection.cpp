@@ -1,62 +1,20 @@
 #include "VignettingCorrection.h"
 
-#include "opencv2/highgui.hpp"
-#include "opencv2/imgproc.hpp"
-
 #include <algorithm>
 #include <array>
+#include <chrono>
 #include <ciso646>
 #include <iostream>
 
 namespace vgncorr {
 
 static auto constexpr DebugPrint = false;
-static auto constexpr MeasureTime = false;
-
-auto constexpr _square = [](auto const x) -> auto { return x * x; };
-
-template <typename T> static Real _sqrt(T sq) {
-  return sqrtf(static_cast<Real>(sq));
-}
-static Real _dist(Point const &p) { return _sqrt(_square(p.x) + _square(p.y)); }
-
-#if CALCULATE_EXACT == 0
-// Helper for simple logarithmic calculation
-static constexpr int _calc_log2i(int const num) {
-  auto res = -1;
-  for (int i = num; i; i >>= 1) {
-    ++res;
-  }
-  if (res > 0 and num & (1 << (res - 1))) {
-    // round up
-    ++res;
-  }
-  return res;
-}
-// pre-calculated lookup table
-struct LogTable {
-  auto static constexpr Size = 1024;
-  uchar table[Size];
-  LogTable() {
-    for (int i = 0; i < Size; ++i) {
-      table[i] = _calc_log2i(i) & 0xffu;
-    }
-  }
-};
-
-static int _log2i(int const num) {
-  static const LogTable t{};
-  if (num < LogTable::Size) {
-    return t.table[num];
-  }
-  return _calc_log2i(num);
-}
-#endif // ! CALCULATE_EXACT
+static auto constexpr MeasureTime = true;
 
 /// Polynomial to calculate the vignetting correction with.
 /// This is of the form:
 /// g_a,b,c(r) = 1 + ar^2 + br^4 + cr^6.
-class Poly {
+class Poly : public imgalg::ImageAlgo {
 public:
   static auto constexpr num_coefficients = 3;
   using CoeffType = Real;
@@ -64,7 +22,7 @@ public:
 
   Poly(Coefficients const &coefficients, Point const &mid_point)
       : coeffs_(coefficients), mid_point_(mid_point),
-        d2_(_square(_dist(mid_point))) {}
+        d2_(square(dist(mid_point))) {}
 
   void set_row(int const row) const;
   /// Check if the polynomial is increasing. I.e. the derivative is positive for
@@ -80,11 +38,11 @@ private:
 };
 
 void Poly::set_row(int const row) const {
-  sq_row_dist_ = static_cast<Real>(_square(mid_point_.y - row));
+  sq_row_dist_ = static_cast<Real>(square(mid_point_.y - row));
 }
 
 Real Poly::calc_at(int const col) const {
-  auto const r2 = (sq_row_dist_ + _square(mid_point_.x - col)) / d2_;
+  auto const r2 = (sq_row_dist_ + square(mid_point_.x - col)) / d2_;
   auto const r4 = r2 * r2;
   auto const r6 = r4 * r2;
   auto const g = 1 + coeffs_[0] * r2 + coeffs_[1] * r4 + coeffs_[2] * r6;
@@ -153,7 +111,7 @@ bool Poly::is_increasing() const {
     return false;
   }
   // b2 > d ensured (with e > 0)
-  auto const sqrt_e = _sqrt(e);
+  auto const sqrt_e = sqrt(e);
   auto const c_3 = 3 * c;
   auto const q_plus = (-b + sqrt_e) / c_3;
   if (c > 0 and q_plus <= 0) { // C7
@@ -169,11 +127,9 @@ bool Poly::is_increasing() const {
   return false;
 }
 
-VignettingCorrection::VignettingCorrection(cv::Mat const &input_image)
-    : input_image_orig_(input_image) {
-  cv::resize(input_image, input_image_, cv::Size(), 1. / ScaleFactor,
-             1. / ScaleFactor);
-}
+VignettingCorrection::VignettingCorrection(ImgViewOrig const &input_image)
+    : input_image_orig_(input_image),
+      input_image_(scaled_down(input_image, ScaleFactor)) {}
 
 VignettingCorrection::~VignettingCorrection() {}
 
@@ -194,7 +150,7 @@ void VignettingCorrection::_smooth_histogram(
   memcpy(histo_orig + SmoothRadius, histogram,
          HistogramSize * sizeof(HistogramType));
 
-  auto constexpr factor_sum = _square(SmoothRadius + 1);
+  auto constexpr factor_sum = square(SmoothRadius + 1);
   //  smooth the histogram
   for (int i = 0; i < HistogramSize; ++i) {
     HistogramType sum = 0;
@@ -211,45 +167,41 @@ void VignettingCorrection::_smooth_histogram(
 }
 
 Real VignettingCorrection::_calc_H(Poly const &poly) const {
-  auto const rows = input_image_.rows;
-  auto const cols = input_image_.cols;
 
   static auto const fact =
       (Depth - 1) / log2f(Depth) / (MaxAllowedBrightness / 256.f);
 
-  HistogramType histogram[MaxAllowedBrightness + 1];
-  memset(histogram, 0, sizeof(histogram));
+  struct CalcH {
+    CalcH() { memset(histogram, 0, sizeof(histogram)); }
 
-  for (int row = 0; row < rows; ++row) {
-    auto const *row_buffer = input_image_.ptr<uchar>(row);
-    poly.set_row(row);
-    for (int col = 0; col < cols; ++col) {
-      auto const g = poly.calc_at(col);
+    HistogramType histogram[MaxAllowedBrightness + 1];
+    bool ok{true};
+  } c{};
 
-#if CALCULATE_EXACT
-      auto const log_img = fact * log2f(1 + g * row_buffer[col]);
-      auto k_lower = static_cast<unsigned>(log_img);
-      auto k_upper = k_lower + 1;
-      if (k_lower >= MaxAllowedBrightness) {
-        return std::numeric_limits<float>::max();
-      }
-      // add discrete histogram value for actual floating point
-      // example: 86.1 is to 0.9 in 86 and to 0.1 in 87
-      histogram[k_lower] += (k_upper - static_cast<HistogramType>(log_img));
-      histogram[k_upper] += (log_img - static_cast<HistogramType>(k_lower));
-#else
-      auto const f = static_cast<int>(1 + g * row_buffer[col]);
-      auto const log_img = fact * _log2i(f);
-      auto const k = static_cast<unsigned>(log_img + 0.5f);
-      if (k >= MaxAllowedBrightness) {
-        return std::numeric_limits<float>::max();
-      }
-      ++histogram[k];
-#endif
+  auto const calc_pixel = [&poly](CalcH &c, auto const row_it,
+                                  int const col) -> bool {
+    auto const g = poly.calc_at(col);
+
+    auto const log_img = fact * log2f(1 + g * row_it[col]);
+    auto k_lower = static_cast<unsigned>(log_img);
+    auto k_upper = k_lower + 1;
+    if (k_lower >= MaxAllowedBrightness) {
+      return false;
     }
+    // add discrete histogram value for actual floating point
+    // example: 86.1 is to 0.9 in 86 and to 0.1 in 87
+    c.histogram[k_lower] += (k_upper - static_cast<HistogramType>(log_img));
+    c.histogram[k_upper] += (log_img - static_cast<HistogramType>(k_lower));
+    return true;
+  };
+  if (auto const result = reduce<CalcH>(
+          c, const_view(input_image_),
+          [&poly](int const row) { poly.set_row(row); }, calc_pixel);
+      result) {
+    return _calc_entropy(c.histogram);
+  } else {
+    return std::numeric_limits<Real>::max();
   }
-
-  return _calc_entropy(histogram);
 }
 
 Real VignettingCorrection::_calc_entropy(
@@ -321,30 +273,28 @@ Poly VignettingCorrection::_calc_best_poly() const {
   return Poly{best_coefficients, {mid.x * ScaleFactor, mid.y * ScaleFactor}};
 }
 
-Point VignettingCorrection::_center_of_mass() const {
-  cv::Mat img(input_image_.size(), CV_8UC1);
-  cv::GaussianBlur(input_image_, img, cv::Size(GaussianSize, GaussianSize), 0);
+VignettingCorrection::Point VignettingCorrection::_center_of_mass() const {
 
-  auto weight_x = 0.f;
-  auto weight_y = 0.f;
-  auto sum = 0.f;
-  unsigned const rows = img.rows;
-  unsigned const cols = img.cols;
-  for (auto row = 0u; row < rows; ++row) {
-    auto const *data = img.ptr<uchar>(row);
-    for (auto col = 0u; col < cols; ++col) {
-      unsigned const d = data[col];
-      sum += d;
-      weight_y += (row + 1) * d;
-      weight_x += (col + 1) * d;
-    }
-  }
-  auto const s2 = sum / 2;
-  return {static_cast<int>((weight_x + s2) / sum),
-          static_cast<int>((weight_y + s2) / sum)};
+  struct Params {
+    float weight_x{0.f};
+    float weight_y{0.f};
+    float sum{0.f};
+    int row;
+  } p{};
+
+  reduce<Params>(
+      p, const_view(input_image_), [&p](int const row) { p.row = row; },
+      [](Params &p, auto const &row_it, int const col) {
+        auto const d = row_it[col];
+        p.sum += d;
+        p.weight_y += (p.row + 1) * d;
+        p.weight_x += (col + 1) * d;
+      });
+  auto const s2 = p.sum / 2;
+  return {div_round(p.weight_x, p.sum), div_round(p.weight_y, p.sum)};
 }
 
-cv::Mat VignettingCorrection::correct() {
+VignettingCorrection::ImgOrig VignettingCorrection::correct() {
 
   [[maybe_unused]] auto const start = std::chrono::high_resolution_clock::now();
   auto const best_poly = _calc_best_poly();
@@ -357,18 +307,30 @@ cv::Mat VignettingCorrection::correct() {
             .count();
     std::cout << "took: " << duration << " ms" << std::endl;
   }
-  cv::Mat result(input_image_orig_.size(), CV_8UC1);
+  auto const dim = dimensions(input_image_orig_);
+  ImgOrig result(create_img(dim));
 
-  for (auto row = 0; row < result.rows; ++row) {
-    auto const *const row_data = input_image_orig_.ptr<uchar>(row);
-    auto *const output_row = result.ptr<uchar>(row);
+  auto const [cols, rows] = dim;
+  auto v = view(result);
+  for (auto row = 0; row < rows; ++row) {
+    auto row_it = row_begin<PixelOrig>(input_image_orig_, row);
+    auto output_it = row_begin<PixelOrig>(v, row);
     best_poly.set_row(row);
-    for (auto col = 0; col < result.cols; ++col) {
+    for (auto col = 0; col < cols; ++col) {
       auto const g = best_poly.calc_at(col);
-      // TODO apply to color image
-      output_row[col] = std::clamp(
-          static_cast<int>(g * row_data[col] / MaxBrightnessFactor + 0.5f), 0,
-          255);
+#ifdef USE_OPENCV
+      output_it[col] = std::clamp<PixelT>(
+          static_cast<PixelT>((g * row_it[col] / MaxBrightnessFactor) + 0.5f),
+          0, 0xff);
+#else
+      auto &pix_out = output_it[col];
+      auto const &pix_in = row_it[col];
+      for (int i = 0; i < boost::gil::num_channels<ImgViewOrig>::value; ++i) {
+        pix_out[i] = std::clamp<int>(
+            static_cast<int>((g * pix_in[i] / MaxBrightnessFactor) + 0.5f), 0,
+            255);
+      }
+#endif
     }
   }
 
@@ -378,23 +340,23 @@ cv::Mat VignettingCorrection::correct() {
 } // namespace vgncorr
 
 int main(int argc, char *argv[]) {
-  using namespace cv;
+  using namespace vgncorr;
   if (argc < 2) {
-	std::cerr << "Please provide a filename\n";
-	return -1;
+    std::cerr << "Please provide a filename\n";
+    return -1;
   }
   std::string const path = argv[1];
-  Mat input_image = cv::imread(path, IMREAD_UNCHANGED);
-  cv::Mat gray(input_image.size(), CV_8UC1);
-  cv::cvtColor(input_image, gray, cv::COLOR_BGR2GRAY);
-  imshow("raw", input_image);
 
-  vgncorr::VignettingCorrection corr(gray);
+  VignettingCorrection::ImgOrig orig;
+  using namespace imgalg;
+
+  ImageAlgo::load_image(orig, path);
+
+  vgncorr::VignettingCorrection corr(const_view(orig));
   auto const out = corr.correct();
-
-  imshow("corrected", out);
-
-  waitKey(0);
+  auto out_path = path;
+  out_path = out_path.replace(path.find("."), 1, "_corr.");
+  ImageAlgo::save_image(out, out_path);
 
   return 0;
 }
