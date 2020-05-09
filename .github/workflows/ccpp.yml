@@ -17,8 +17,10 @@ jobs:
       run: pip3 install setuptools
     - name: prepare
       run: pip3 install --user conan 
+    - name: mkbuild
+      run: mkdir build
     - name: configure
-      run: source ~/.profile && conan install .. --settings arch=x86_64
+      run: source ~/.profile && cd build && conan install .. --settings arch=x86_64
     - name: make
       run: cmake .. -DCMAKE_GENERATOR_PLATFORM=x64
     - name: build
