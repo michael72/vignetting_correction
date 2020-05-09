@@ -22,7 +22,7 @@ jobs:
     - name: configure
       run: source ~/.profile && cd build && conan install .. --settings arch=x86_64
     - name: make
-      run: cmake .. -DCMAKE_GENERATOR_PLATFORM=x64
+      run: cd build && cmake .. -DCMAKE_GENERATOR_PLATFORM=x64
     - name: build
-      run: cmake --build . --config Release
+      run: cd build && cmake --build . --config Release
     
