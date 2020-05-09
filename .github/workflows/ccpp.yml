@@ -13,14 +13,8 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
-    - name: setup
-      run: pip3 install setuptools
-    - name: prepare
-      run: pip3 install --user conan 
     - name: configure
-      run: source ~/.profile && conan install .. --settings arch=x86_64
-    - name: make
-      run: cmake .. -DCMAKE_GENERATOR_PLATFORM=x64
+      run: bash configure.sh
     - name: build
-      run: cmake --build . --config Release
+      run: bash build.sh 
     
