@@ -14,6 +14,6 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: configure
-      run: bash configure.sh
+      run: ./configure.sh
     - name: build
-      run: bash build.sh 
+      run: ./build.sh 
