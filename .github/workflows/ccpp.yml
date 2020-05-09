@@ -17,4 +17,3 @@ jobs:
       run: bash configure.sh
     - name: build
       run: bash build.sh 
-    
