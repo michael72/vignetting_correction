@@ -13,8 +13,9 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
-    - name: prepare
+    - name: setup
       run: pip3 install setuptools
+    - name: prepare
       run: pip3 install conan
     - name: env
       run: source ~/.profile
