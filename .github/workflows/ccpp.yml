@@ -16,11 +16,9 @@ jobs:
     - name: setup
       run: pip3 install setuptools
     - name: prepare
-      run: pip3 install conan
-    - name: env
-      run: source ~/.profile
+      run: pip3 install --user conan 
     - name: configure
-      run: conan install .. --settings arch=x86_64
+      run: source ~/.profile && conan install .. --settings arch=x86_64
     - name: make
       run: cmake .. -DCMAKE_GENERATOR_PLATFORM=x64
     - name: build
