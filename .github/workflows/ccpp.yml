@@ -20,9 +20,9 @@ jobs:
     - name: mkbuild
       run: mkdir build
     - name: configure
-      run: source ~/.profile && cd build && conan install .. --settings arch=x86_64
+      run: source ~/.profile && cd build && conan install .. 
     - name: make
-      run: cd build && cmake .. -DCMAKE_GENERATOR_PLATFORM=x64
+      run: cd build && cmake .. 
     - name: build
       run: cd build && cmake --build . --config Release
     
