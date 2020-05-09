@@ -13,11 +13,12 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
+    - name: prepare
+      run: pip install conan
     - name: configure
-      run: ./configure
+      run: conan install .. --settings arch=x86_64
     - name: make
-      run: make
-    - name: make check
-      run: make check
-    - name: make distcheck
-      run: make distcheck
+      run: cmake .. -DCMAKE_GENERATOR_PLATFORM=x64
+    - name: build
+      run: cmake --build . --config Release
+    
