@@ -7,3 +7,13 @@ See also
 * https://github.com/HJCYFY/Vignetting-Correction
 * https://github.com/dajuric/dot-devignetting
 
+## Build the project
+
+### Prerequisites
+
+- [Python](https://python.org)
+- [Conan](https://conan.io)
+- [CMake](https://cmake.org)
+
+On Ubuntu:
+`./configure.sh` 
