@@ -29,4 +29,5 @@ build.bat
 build\bin\vgncorr.exe <img-filename>
 ```
 
+The resulting image is copied to the same folder.
 
