@@ -11,9 +11,22 @@ See also
 
 ### Prerequisites
 
+Install:
 - [Python](https://python.org)
 - [Conan](https://conan.io)
 - [CMake](https://cmake.org)
 
 On Ubuntu:
-`./configure.sh` 
+```shell
+./configure.sh
+./build.sh
+./build/bin/vgncorr <img-filename>
+```
+
+On Windows:
+```shell
+build.bat
+build\bin\vgncorr.exe <img-filename>
+```
+
+
