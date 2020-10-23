@@ -28,21 +28,22 @@ public:
                cv::INTER_LINEAR_EXACT);
     return result;
   }
-  template <typename P, typename V> static P *row_begin(V &img, int const row) {
-    return img.ptr<P>(row);
+  template <typename P, typename V> 
+  static P *row_begin(V &img, int const row) {
+    return img.ptr(row);
   }
 
   template <typename P, typename V>
   static P const *row_begin(V const &img, int const row) {
-    return img.ptr<P>(row);
+    return img.ptr(row);
   }
 
-  static void load_image(ImgOrig &orig, std::string const &path) {
+  static void load_image(ImgOrig &orig, cv::String const &path) {
     orig = cv::imread(path, cv::IMREAD_UNCHANGED);
   }
 
-  static void save_image(ImgOrig const &img, std::string const &path) {
-    cv::imwrite(path, img);
+  static bool save_image(ImgOrig const &img, cv::String const &path) {
+    return cv::imwrite(path, (cv::InputArray)img);
   }
 };
 } // namespace imgalg

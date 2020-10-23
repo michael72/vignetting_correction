@@ -38,7 +38,7 @@ private:
   template <int SmoothRadius = 4>
   static void _smooth_histogram(HistogramType (&histogram)[HistogramSize + 1]);
 
-  ImgViewOrig const &input_image_orig_;
+  ImgViewOrig const input_image_orig_;
   // scaled and gray version of the input image
   Img input_image_;
 };
