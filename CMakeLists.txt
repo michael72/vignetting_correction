@@ -22,6 +22,8 @@ set ( SOURCE_FILES
 	  ImageAlgo_opencv.h )
 
 add_executable( vgncorr ${SOURCE_FILES} )
-#add_compile_definitions("USE_OPENCV")
+if(DEFINED ENV{USE_OPENCV}) 
+  add_compile_definitions("USE_OPENCV")
+endif()
 target_include_directories( vgncorr PRIVATE "${boost_SOURCE_DIR}/include" )
 target_link_libraries( vgncorr ${CONAN_LIBS} )
