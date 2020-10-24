@@ -1,6 +1,7 @@
 #pragma once
 #include <algorithm>
 #include <string>
+#include <cctype>
 
 #ifdef _MSC_VER
 #pragma warning(push)
@@ -75,9 +76,15 @@ class ImageAlgoBase {
 
   template <typename Fun>
   static void img_action(std::string const &path, Fun const &fun) {
-    auto const has_ending = [&path](std::string const &ending) -> bool {
+	auto const lower = [](auto const& s) {
+		std::string data = s;
+		std::transform(data.cbegin(), data.cend(), data.begin(),
+		  [](unsigned char c) { return std::tolower(c); });
+		return data;
+	};
+    auto const has_ending = [&](std::string const &ending) -> bool {
       return path.length() >= ending.length() and
-             not path.compare(path.length() - ending.length(), ending.length(),
+             not lower(path).compare(path.length() - ending.length(), ending.length(),
                               ending);
     };
     if (has_ending(".png")) {
