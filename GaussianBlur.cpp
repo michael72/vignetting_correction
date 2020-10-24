@@ -24,12 +24,12 @@ constexpr static PixelT clamp(float const f) { return clamp(iround(f)); }
 // gaussian blur algorithm by Ivan Kutskir
 // http://blog.ivank.net/fastest-gaussian-blur.html
 
-static vector<int> boxesForGauss(float sigma,
+static vector<int> boxesForGauss(int sigma,
                                  int n)  // standard deviation, number of boxes
 {
   auto const wIdeal =
       sqrt((12 * sigma * sigma / n) + 1);  // Ideal averaging filter width
-  int wl = floor(wIdeal);
+  int wl = static_cast<int>(wIdeal);
   if (wl % 2 == 0) --wl;
   int wu = wl + 2;
 
@@ -123,7 +123,11 @@ vector<PixelT> gaussBlur(vector<PixelT> const& source, int w, int h, int radius,
 
 Img GaussianBlur::blur(Img const& img, int radius, int n) {
   auto pixels = std::vector<PixelT>();
-  pixels.reserve(img.width() * img.height());
+  auto const [cols, rows] = dimensions(img);
+  auto const height = static_cast<int>(rows);
+  auto const width = static_cast<int>(cols);
+
+  pixels.reserve(width * height);
 
   reduce(
       pixels, const_view(img), [](int const row) {},
@@ -142,7 +146,11 @@ Img GaussianBlur::blur(Img const& img, int radius, int n) {
   reduce(
       p, view(result), [](int const row) {},
       [](auto& p, auto& row_it, int const col) {
-        const_cast<PixelT&>(row_it[col][0]) = p.blurred[p.idx++];
+#ifdef USE_OPENCV
+	  row_it[col] = p.blurred[p.idx++];
+#else
+	  const_cast<PixelT&>(row_it[col][0]) = p.blurred[p.idx++];
+#endif
       });
   return result;
 }
