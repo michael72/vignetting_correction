@@ -11,24 +11,26 @@
 #include <boost/gil/extension/io/bmp.hpp>
 #include <boost/gil/extension/io/jpeg.hpp>
 #include <boost/gil/extension/io/png.hpp>
+#include <boost/gil/extension/numeric/convolve.hpp>
+#include <boost/gil/extension/numeric/kernel.hpp>
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif
 
 namespace imgalg {
+using Pixel = boost::gil::gray8_pixel_t;
+using PixelT = uint8_t;
+using PixelOrig = boost::gil::rgb8_pixel_t;
+using Img = boost::gil::image<Pixel>;
+using ImgOrig = boost::gil::image<PixelOrig>;
+using ImgView = boost::gil::image<Pixel>::const_view_t;
+using ImgViewOrig = boost::gil::image<PixelOrig>::const_view_t;
+using Point = ImgView::point_t;
+
+using Size = Point;
 
 class ImageAlgoBase {
 public:
-  using Pixel = boost::gil::gray8_pixel_t;
-  using PixelT = uint8_t;
-  using PixelOrig = boost::gil::rgb8_pixel_t;
-  using Img = boost::gil::image<Pixel>;
-  using ImgOrig = boost::gil::image<PixelOrig>;
-  using ImgView = boost::gil::image<Pixel>::const_view_t;
-  using ImgViewOrig = boost::gil::image<PixelOrig>::const_view_t;
-  using Point = ImgView::point_t;
-
-  using Size = Point;
   template <typename V> static Size dimensions(V const &v) {
     return v.dimensions();
   }

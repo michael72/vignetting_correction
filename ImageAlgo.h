@@ -12,10 +12,10 @@
 #endif
 
 namespace imgalg {
+using Real = float;
 
 class ImageAlgo : public ImageAlgoBase {
 public:
-  using Real = float;
   using HistogramType = Real;
 
   template <typename T> static constexpr T square(T const x) { return x * x; }

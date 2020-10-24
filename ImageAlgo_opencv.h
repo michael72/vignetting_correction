@@ -7,19 +7,19 @@
 
 namespace imgalg {
 
+using Point = cv::Point2i;
+using ImgOrig = cv::Mat;
+using ImgViewOrig = cv::Mat;
+using Img = ImgOrig;
+using Pixel = uint8_t;
+using PixelOrig = uint8_t;
+using PixelT = uint8_t;
+using Size = cv::Size;
+
 class ImageAlgoBase {
 public:
-  using Point = cv::Point2i;
-  using ImgOrig = cv::Mat;
-  using ImgViewOrig = cv::Mat;
-  using Img = ImgOrig;
-  using Pixel = uint8_t;
-  using PixelOrig = uint8_t;
-  using PixelT = uint8_t;
-
   static inline cv::Mat const &const_view(cv::Mat const &mat) { return mat; }
   static inline cv::Mat &view(cv::Mat &mat) { return mat; }
-  using Size = cv::Size;
   static Size dimensions(cv::Mat const &mat) { return mat.size(); }
   static Img create_img(Size const &size) { return cv::Mat{size, CV_8UC1}; }
   static Img scaled_down(ImgViewOrig const &input_image, int const SF) {

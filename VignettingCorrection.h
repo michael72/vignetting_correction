@@ -10,10 +10,10 @@ class Poly;
 
 class VignettingCorrection : public imgalg::ImageAlgo {
 public:
-  VignettingCorrection(ImgOrig const &img);
+  VignettingCorrection(imgalg::ImgOrig const &img);
   ~VignettingCorrection();
 
-  ImgOrig correct();
+  imgalg::ImgOrig correct();
   static auto constexpr Depth = 256;
   static auto constexpr MaxBrightnessFactor = 1.0f;
   static_assert(MaxBrightnessFactor >= 1.f);
@@ -33,13 +33,13 @@ private:
   static Real
       _calc_entropy(HistogramType (&histogram)[MaxAllowedBrightness + 1]);
 
-  Point _center_of_mass() const;
+  imgalg::Point _center_of_mass() const;
   Poly _calc_best_poly() const;
   template <int SmoothRadius = 4>
   static void _smooth_histogram(HistogramType (&histogram)[HistogramSize + 1]);
 
-  ImgViewOrig const input_image_orig_;
+  imgalg::ImgViewOrig const input_image_orig_;
   // scaled and gray version of the input image
-  Img input_image_;
+  imgalg::Img input_image_;
 };
 } // namespace vgncorr

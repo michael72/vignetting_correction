@@ -273,7 +273,7 @@ Poly VignettingCorrection::_calc_best_poly() const {
   return Poly{best_coefficients, {mid.x * ScaleFactor, mid.y * ScaleFactor}};
 }
 
-VignettingCorrection::Point VignettingCorrection::_center_of_mass() const {
+Point VignettingCorrection::_center_of_mass() const {
 
   struct Params {
     float weight_x{0.f};
@@ -294,7 +294,7 @@ VignettingCorrection::Point VignettingCorrection::_center_of_mass() const {
   return {div_round(p.weight_x, p.sum), div_round(p.weight_y, p.sum)};
 }
 
-VignettingCorrection::ImgOrig VignettingCorrection::correct() {
+ImgOrig VignettingCorrection::correct() {
 
   [[maybe_unused]] auto const start = std::chrono::high_resolution_clock::now();
   auto const best_poly = _calc_best_poly();
@@ -347,7 +347,7 @@ int main(int argc, char *argv[]) {
   }
   std::string const path = argv[1];
 
-  VignettingCorrection::ImgOrig orig;
+  ImgOrig orig;
   using namespace imgalg;
 
   ImageAlgo::load_image(orig, path);
