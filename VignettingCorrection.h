@@ -9,7 +9,7 @@ using HistogramType = Real;
 class Poly;
 
 class VignettingCorrection : public imgalg::ImageAlgo {
-public:
+ public:
   VignettingCorrection(imgalg::ImgOrig const &img);
   ~VignettingCorrection();
 
@@ -21,17 +21,18 @@ public:
       static_cast<int>(256 * MaxBrightnessFactor + 0.5f);
   static auto constexpr HistogramSize = MaxAllowedBrightness;
   static auto constexpr ScaleFactor = 8;
+  static auto constexpr BlurFactor = 7;
 
   static auto constexpr DeltaStart = 4.f;
   static auto constexpr DeltaMinDivider =
-      256; // smallest delta is 1 / DeltaMinDivider
+      256;  // smallest delta is 1 / DeltaMinDivider
 
   static auto constexpr HistogramSmoothFactor = 16;
 
-private:
+ private:
   Real _calc_H(Poly const &poly) const;
-  static Real
-      _calc_entropy(HistogramType (&histogram)[MaxAllowedBrightness + 1]);
+  static Real _calc_entropy(
+      HistogramType (&histogram)[MaxAllowedBrightness + 1]);
 
   imgalg::Point _center_of_mass() const;
   Poly _calc_best_poly() const;
@@ -42,4 +43,4 @@ private:
   // scaled and gray version of the input image
   imgalg::Img input_image_;
 };
-} // namespace vgncorr
+}  // namespace vgncorr

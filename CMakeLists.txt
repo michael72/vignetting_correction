@@ -15,6 +15,8 @@ conan_basic_setup()
 set ( SOURCE_FILES
 	  VignettingCorrection.cpp
 	  VignettingCorrection.h 
+	  GaussianBlur.h
+	  GaussianBlur.cpp
 	  ImageAlgo.h 
 	  ImageAlgo_gil.h
 	  ImageAlgo_opencv.h )

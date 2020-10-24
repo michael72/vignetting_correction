@@ -4,7 +4,7 @@
 
 #ifdef _MSC_VER
 #pragma warning(push)
-#pragma warning(disable : 4996) // suppress warning to use wcstomb_s in
+#pragma warning(disable : 4996)  // suppress warning to use wcstomb_s in
 #pragma warning(disable : 4244)
 #endif
 #include <boost/gil.hpp>
@@ -30,13 +30,15 @@ using Point = ImgView::point_t;
 using Size = Point;
 
 class ImageAlgoBase {
-public:
-  template <typename V> static Size dimensions(V const &v) {
+ public:
+  template <typename V>
+  static Size dimensions(V const &v) {
     return v.dimensions();
   }
   static Size create_img(Size const &size) { return size; }
 
-  template <typename P, typename V> static P *row_begin(V &img, int const row) {
+  template <typename P, typename V>
+  static P *row_begin(V &img, int const row) {
     return img.row_begin(row);
   }
 
@@ -90,17 +92,18 @@ public:
     }
   }
 
-  static void load_image(ImgOrig &orig, std::string const &path) {
-    img_action(path, [&](auto tag) {
-      boost::gil::read_image(path, orig, tag);
-    });
+  template <typename I>
+  static void load_image(I &orig, std::string const &path) {
+    img_action(path,
+               [&](auto tag) { boost::gil::read_image(path, orig, tag); });
   }
 
-  static void save_image(ImgOrig const &img, std::string const &path) {
+  template <typename I>
+  static void save_image(I const &img, std::string const &path) {
     img_action(path, [&](auto tag) {
       boost::gil::write_view(path, const_view(img), tag);
     });
   }
 };
 
-} // namespace imgalg
+}  // namespace imgalg

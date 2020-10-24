@@ -15,32 +15,38 @@ namespace imgalg {
 using Real = float;
 
 class ImageAlgo : public ImageAlgoBase {
-public:
+ public:
   using HistogramType = Real;
 
-  template <typename T> static constexpr T square(T const x) { return x * x; }
+  template <typename T>
+  static constexpr T square(T const x) {
+    return x * x;
+  }
 
-  template <typename T> static Real sqrt(T sq) {
+  template <typename T>
+  static Real sqrt(T sq) {
     return sqrtf(static_cast<Real>(sq));
   }
 
-  template <typename T> static constexpr int div_round(T const a, T const b) {
+  template <typename T>
+  static constexpr int div_round(T const a, T const b) {
     return static_cast<int>((a + b / 2) / b);
   }
 
   static Real dist(Point const &p) { return sqrt(square(p.x) + square(p.y)); }
 
   template <typename T, typename View, typename Fun>
-  bool reduce(T &akku, View const &view,
-              std::function<void(int)> const &row_fun, Fun const &fun) const {
+  static bool reduce(T &akku, View &view,
+                     std::function<void(int)> const &row_fun, Fun const &fun) {
     auto const [cols, rows] = dimensions(view);
 
     using PixelIt = decltype(row_begin<Pixel>(view, 0));
     static auto constexpr bool_result =
-        std::is_same<std::invoke_result_t<Fun, T &, PixelIt, int>, bool>::value;
+        std::is_same<std::invoke_result_t<Fun, T &, PixelIt &, int>,
+                     bool>::value;
 
     for (int row = 0; row < rows; ++row) {
-      auto const &row_it = row_begin<Pixel>(view, row);
+      auto row_it = row_begin<Pixel>(view, row);
       row_fun(row);
       for (int col = 0; col < cols; ++col) {
         if constexpr (bool_result) {
@@ -56,4 +62,4 @@ public:
     return true;
   }
 };
-} // namespace imgalg
+}  // namespace imgalg

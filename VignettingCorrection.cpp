@@ -6,8 +6,10 @@
 #include <ciso646>
 #include <iostream>
 
+#include "GaussianBlur.h"
+
 namespace vgncorr {
-  
+
 using namespace imgalg;
 
 static auto constexpr DebugPrint = false;
@@ -17,13 +19,14 @@ static auto constexpr MeasureTime = true;
 /// This is of the form:
 /// g_a,b,c(r) = 1 + ar^2 + br^4 + cr^6.
 class Poly : public imgalg::ImageAlgo {
-public:
+ public:
   static auto constexpr num_coefficients = 3;
   using CoeffType = Real;
   using Coefficients = std::array<CoeffType, num_coefficients>;
 
   Poly(Coefficients const &coefficients, Point const &mid_point)
-      : coeffs_(coefficients), mid_point_(mid_point),
+      : coeffs_(coefficients),
+        mid_point_(mid_point),
         d2_(square(dist(mid_point))) {}
 
   void set_row(int const row) const;
@@ -32,7 +35,7 @@ public:
   bool is_increasing() const;
   Real calc_at(int const col) const;
 
-private:
+ private:
   Coefficients const coeffs_;
   Point const mid_point_;
   Real const d2_;
@@ -94,19 +97,19 @@ C9 = (c < 0 and b2 > d and q_plus >= 1 and q_minus <= 0);
 bool Poly::is_increasing() const {
   auto const [a, b, c] = coeffs_;
 
-  if ((a > 0 and b == 0 and c == 0) or // C1
-      (a >= 0 and b > 0 and c == 0)) { // C2
+  if ((a > 0 and b == 0 and c == 0) or  // C1
+      (a >= 0 and b > 0 and c == 0)) {  // C2
     return false;
   }
   auto const d = 3 * a * c;
   auto const b2 = b * b;
-  if ((c > 0 and b2 < d) or                  // C4
-      (c > 0 and b2 == d and b >= 0) or      // C5
-      (c > 0 and b2 == d and -b >= 3 * c)) { // C6
+  if ((c > 0 and b2 < d) or                   // C4
+      (c > 0 and b2 == d and b >= 0) or       // C5
+      (c > 0 and b2 == d and -b >= 3 * c)) {  // C6
     return true;
   }
   if (c == 0) {
-    return b < 0 and -a <= 2 * b; // shortcut + C3
+    return b < 0 and -a <= 2 * b;  // shortcut + C3
   }
   auto const e = b2 - d;
   if (e <= 0) {
@@ -116,14 +119,14 @@ bool Poly::is_increasing() const {
   auto const sqrt_e = sqrt(e);
   auto const c_3 = 3 * c;
   auto const q_plus = (-b + sqrt_e) / c_3;
-  if (c > 0 and q_plus <= 0) { // C7
+  if (c > 0 and q_plus <= 0) {  // C7
     return true;
   }
   auto const q_minus = (-b - sqrt_e) / c_3;
-  if (c > 0 and q_minus >= 1) { // C8
+  if (c > 0 and q_minus >= 1) {  // C8
     return true;
   }
-  if (c < 0 and q_plus >= 1 and q_minus <= 0) { // C9
+  if (c < 0 and q_plus >= 1 and q_minus <= 0) {  // C9
     return true;
   }
   return false;
@@ -131,14 +134,14 @@ bool Poly::is_increasing() const {
 
 VignettingCorrection::VignettingCorrection(ImgOrig const &input_image)
     : input_image_orig_(const_view(input_image)),
-      input_image_(scaled_down(input_image_orig_, ScaleFactor)) {}
+      input_image_(
+          GaussianBlur::blur(scaled_down(input_image_orig_, ScaleFactor), 7)) {}
 
 VignettingCorrection::~VignettingCorrection() {}
 
 template <int SmoothRadius>
 void VignettingCorrection::_smooth_histogram(
     HistogramType (&histogram)[HistogramSize + 1]) {
-
   HistogramType histo_orig[HistogramSize + 2 * SmoothRadius];
 
   // add mirrored values at the edges
@@ -169,7 +172,6 @@ void VignettingCorrection::_smooth_histogram(
 }
 
 Real VignettingCorrection::_calc_H(Poly const &poly) const {
-
   static auto const fact =
       (Depth - 1) / log2f(Depth) / (MaxAllowedBrightness / 256.f);
 
@@ -208,7 +210,6 @@ Real VignettingCorrection::_calc_H(Poly const &poly) const {
 
 Real VignettingCorrection::_calc_entropy(
     HistogramType (&histogram)[MaxAllowedBrightness + 1]) {
-
   _smooth_histogram<HistogramSmoothFactor>(histogram);
   float sum = 0;
   for (int i = 0; i < MaxAllowedBrightness; ++i) {
@@ -226,8 +227,8 @@ Real VignettingCorrection::_calc_entropy(
 
 Poly VignettingCorrection::_calc_best_poly() const {
   float delta = DeltaStart;
-  auto const mid =
-      _center_of_mass(); // Point{input_image_.cols / 2, input_image_.rows / 2};
+  auto const mid = _center_of_mass();  // Point{input_image_.cols / 2,
+                                       // input_image_.rows / 2};
   Poly::Coefficients best_coefficients = {0, 0, 0}, current_best = {0, 0, 0};
   auto H_min = _calc_H(Poly(best_coefficients, mid));
 
@@ -276,7 +277,6 @@ Poly VignettingCorrection::_calc_best_poly() const {
 }
 
 Point VignettingCorrection::_center_of_mass() const {
-
   struct Params {
     float weight_x{0.f};
     float weight_y{0.f};
@@ -297,7 +297,6 @@ Point VignettingCorrection::_center_of_mass() const {
 }
 
 ImgOrig VignettingCorrection::correct() {
-
   [[maybe_unused]] auto const start = std::chrono::high_resolution_clock::now();
   auto const best_poly = _calc_best_poly();
 
@@ -339,7 +338,7 @@ ImgOrig VignettingCorrection::correct() {
   return result;
 }
 
-} // namespace vgncorr
+}  // namespace vgncorr
 
 int main(int argc, char *argv[]) {
   using namespace vgncorr;
