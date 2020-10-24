@@ -7,6 +7,8 @@
 #include <iostream>
 
 namespace vgncorr {
+  
+using namespace imgalg;
 
 static auto constexpr DebugPrint = false;
 static auto constexpr MeasureTime = true;
