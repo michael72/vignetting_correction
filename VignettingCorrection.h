@@ -10,7 +10,7 @@ class Poly;
 
 class VignettingCorrection : public imgalg::ImageAlgo {
  public:
-  VignettingCorrection(imgalg::ImgOrig const &img);
+  VignettingCorrection(imgalg::ImgOrig const &img, int scale_factor, int blur_factor);
   ~VignettingCorrection();
 
   imgalg::ImgOrig correct();
@@ -20,9 +20,7 @@ class VignettingCorrection : public imgalg::ImageAlgo {
   static auto constexpr MaxAllowedBrightness =
       static_cast<int>(256 * MaxBrightnessFactor + 0.5f);
   static auto constexpr HistogramSize = MaxAllowedBrightness;
-  static auto constexpr ScaleFactor = 8;
-  static auto constexpr BlurFactor = 7;
-
+  
   static auto constexpr DeltaStart = 4.f;
   static auto constexpr DeltaMinDivider =
       256;  // smallest delta is 1 / DeltaMinDivider
@@ -38,6 +36,8 @@ class VignettingCorrection : public imgalg::ImageAlgo {
   Poly _calc_best_poly() const;
   template <int SmoothRadius = 4>
   static void _smooth_histogram(HistogramType (&histogram)[HistogramSize + 1]);
+  int scale_factor_;
+  int blur_factor_;
 
   imgalg::ImgViewOrig const input_image_orig_;
   // scaled and gray version of the input image

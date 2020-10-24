@@ -132,10 +132,12 @@ bool Poly::is_increasing() const {
   return false;
 }
 
-VignettingCorrection::VignettingCorrection(ImgOrig const &input_image)
-    : input_image_orig_(const_view(input_image)),
+VignettingCorrection::VignettingCorrection(ImgOrig const &input_image, int scale_factor, int blur_factor)
+    : scale_factor_(scale_factor),
+	blur_factor_(blur_factor),
+	input_image_orig_(const_view(input_image)),
       input_image_(
-          GaussianBlur::blur(scaled_down(input_image_orig_, ScaleFactor), 7)) {}
+          GaussianBlur::blur(scaled_down(input_image_orig_, scale_factor_), blur_factor_)) {}
 
 VignettingCorrection::~VignettingCorrection() {}
 
@@ -273,7 +275,7 @@ Poly VignettingCorrection::_calc_best_poly() const {
     }
   }
 
-  return Poly{best_coefficients, {mid.x * ScaleFactor, mid.y * ScaleFactor}};
+  return Poly{best_coefficients, {mid.x * scale_factor_, mid.y * scale_factor_}};
 }
 
 Point VignettingCorrection::_center_of_mass() const {
@@ -298,6 +300,8 @@ Point VignettingCorrection::_center_of_mass() const {
 
 ImgOrig VignettingCorrection::correct() {
   [[maybe_unused]] auto const start = std::chrono::high_resolution_clock::now();
+  auto const dim = dimensions(input_image_orig_);
+  auto const[cols, rows] = dim;
   auto const best_poly = _calc_best_poly();
 
   if constexpr (MeasureTime) {
@@ -308,10 +312,8 @@ ImgOrig VignettingCorrection::correct() {
             .count();
     std::cout << "took: " << duration << " ms" << std::endl;
   }
-  auto const dim = dimensions(input_image_orig_);
   ImgOrig result(create_img(dim));
 
-  auto const [cols, rows] = dim;
   auto v = view(result);
   for (auto row = 0; row < rows; ++row) {
     auto row_it = row_begin<PixelOrig>(input_image_orig_, row);
@@ -352,14 +354,30 @@ int main(int argc, char *argv[]) {
   using namespace imgalg;
 
   ImageAlgo::load_image(orig, path);
+#ifdef USE_OPENCV
+  int const cols = orig.cols;
+  int const rows = orig.rows;
+#else
+  int const cols = static_cast<int>(orig.width());
+  int const rows = static_cast<int>(orig.height());
+#endif
+  int scale_factor = 16;
+  int blur_factor = 29;
+  if (cols < 2000) {
+    blur_factor = 19;
+    if (cols < 1000) {
+      scale_factor = 8;
+      blur_factor = 7;
+    }
+  }
 
 #ifdef USE_OPENCV
   // TODO support colored images
   cv::Mat gray(orig.size(), CV_8UC1);
   cv::cvtColor(orig, gray, cv::COLOR_BGR2GRAY);
-  vgncorr::VignettingCorrection corr(gray);
+  vgncorr::VignettingCorrection corr(gray, scale_factor, blur_factor);
 #else
-  vgncorr::VignettingCorrection corr(orig);
+  vgncorr::VignettingCorrection corr(orig, scale_factor, blur_factor);
 #endif
   auto const out = corr.correct();
   auto out_path = path;
