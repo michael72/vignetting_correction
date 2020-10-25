@@ -191,8 +191,8 @@ void VignettingCorrection::_smooth_histogram(
 }
 
 Real VignettingCorrection::_calc_H(Poly const &poly) const {
-  static auto constexpr fact = (Depth - 1) / static_cast<float>(log2i(Depth)) /
-                               (MaxAllowedBrightness / 256.f);
+  static auto constexpr fact = Depth / static_cast<float>(log2i(Depth)) /
+                               (MaxAllowedBrightness / 255.f);
 
   struct CalcH {
     CalcH() { memset(histogram, 0, sizeof(histogram)); }
@@ -344,7 +344,7 @@ ImgOrig VignettingCorrection::correct() {
       auto &pix_out = output_it[col];
       auto const &pix_in = row_it[col];
       for (int i = 0; i < nc; ++i) {
-		pix_out[i] = clamp(g * pix_in[i] / MaxBrightnessFactor);
+		pix_out[i] = clamp(g * pix_in[i]);
       }
     }
   }

@@ -22,9 +22,7 @@ class VignettingCorrection : public imgalg::ImageAlgo {
 
   imgalg::ImgOrig correct();
   static auto constexpr Depth = 256;
-  static auto constexpr MaxBrightnessFactor = 1.0f;
-  static_assert(MaxBrightnessFactor >= 1.f);
-  static auto constexpr MaxAllowedBrightness = imgalg::iround(255 * MaxBrightnessFactor);
+  static auto constexpr MaxAllowedBrightness = 255;
   static auto constexpr HistogramSize = MaxAllowedBrightness;
   
   static auto constexpr DeltaStart = 4.f;
