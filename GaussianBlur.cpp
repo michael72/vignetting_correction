@@ -139,7 +139,7 @@ Img GaussianBlur::blur(Img const& img, int radius, int n) {
     std::vector<PixelT> blurred;
     int idx;
   };
-  Param p = {gaussBlur(pixels, img.width(), img.height(), radius, n), 0};
+  Param p = {gaussBlur(pixels, width, height, radius, n), 0};
 
   Img result = img;
 
