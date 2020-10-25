@@ -8,10 +8,17 @@ using HistogramType = Real;
 
 class Poly;
 
+struct Factors {
+  int scale;
+  int blur;
+};
+
 class VignettingCorrection : public imgalg::ImageAlgo {
  public:
-  VignettingCorrection(imgalg::ImgOrig const &img, int scale_factor, int blur_factor);
+  VignettingCorrection(imgalg::ImgOrig const &img, Factors const& factors);
   ~VignettingCorrection();
+
+  static Factors default_factors(imgalg::ImgOrig const& img);
 
   imgalg::ImgOrig correct();
   static auto constexpr Depth = 256;
@@ -36,9 +43,8 @@ class VignettingCorrection : public imgalg::ImageAlgo {
   Poly _calc_best_poly() const;
   template <int SmoothRadius = 4>
   static void _smooth_histogram(HistogramType (&histogram)[HistogramSize + 1]);
-  int scale_factor_;
-  int blur_factor_;
-
+  
+  Factors factors_;
   imgalg::ImgViewOrig const input_image_orig_;
   // scaled and gray version of the input image
   imgalg::Img input_image_;

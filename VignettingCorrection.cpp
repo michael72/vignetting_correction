@@ -133,12 +133,11 @@ bool Poly::is_increasing() const {
   return false;
 }
 
-VignettingCorrection::VignettingCorrection(ImgOrig const &input_image, int scale_factor, int blur_factor)
-    : scale_factor_(scale_factor),
-	blur_factor_(blur_factor),
+VignettingCorrection::VignettingCorrection(ImgOrig const &input_image, Factors const& factors)
+    : factors_(factors),
 	input_image_orig_(const_view(input_image)),
       input_image_(
-          GaussianBlur::blur(scaled_down(input_image_orig_, scale_factor_), blur_factor_)) {}
+          GaussianBlur::blur(scaled_down_gray(input_image_orig_, factors_.scale), factors_.blur)) {}
 
 VignettingCorrection::~VignettingCorrection() {}
 
@@ -276,7 +275,7 @@ Poly VignettingCorrection::_calc_best_poly() const {
     }
   }
 
-  return Poly{best_coefficients, {mid.x * scale_factor_, mid.y * scale_factor_}};
+  return Poly{best_coefficients, {mid.x * factors_.scale, mid.y * factors_.scale}};
 }
 
 Point VignettingCorrection::_center_of_mass() const {
@@ -316,29 +315,38 @@ ImgOrig VignettingCorrection::correct() {
   ImgOrig result(create_img(dim));
 
   auto v = view(result);
+  const auto nc = num_channels(input_image_orig_);
+
   for (auto row = 0; row < rows; ++row) {
-    auto row_it = row_begin<PixelOrig>(input_image_orig_, row);
-    auto output_it = row_begin<PixelOrig>(v, row);
+    auto row_it = row_begin<PixelOut>(input_image_orig_, row);
+    auto output_it = row_begin<PixelOut>(v, row);
     best_poly.set_row(row);
     for (auto col = 0; col < cols; ++col) {
       auto const g = best_poly.calc_at(col);
-#ifdef USE_OPENCV
-      output_it[col] = std::clamp<PixelT>(
-          static_cast<PixelT>((g * row_it[col] / MaxBrightnessFactor) + 0.5f),
-          0, 0xff);
-#else
       auto &pix_out = output_it[col];
       auto const &pix_in = row_it[col];
-      for (int i = 0; i < boost::gil::num_channels<ImgViewOrig>::value; ++i) {
+      for (int i = 0; i < nc; ++i) {
         pix_out[i] = std::clamp<int>(
             static_cast<int>((g * pix_in[i] / MaxBrightnessFactor) + 0.5f), 0,
             255);
       }
-#endif
     }
   }
 
   return result;
+}
+
+Factors VignettingCorrection::default_factors(imgalg::ImgOrig const &img) {
+  auto const [cols, rows] = dimensions(img);
+  auto factors = Factors{16, 19};
+  if (cols < 2000) {
+    factors.blur = 11;
+    if (cols < 1000) {
+      factors.scale = 8;
+      factors.blur = (cols <= 500) ? 5 : 7;
+    }
+  }
+  return factors;
 }
 
 }  // namespace vgncorr
@@ -359,34 +367,13 @@ int main(int argc, char *argv[]) {
   using namespace imgalg;
 
   ImageAlgo::load_image(orig, path);
-#ifdef USE_OPENCV
-  int const cols = orig.cols;
-  int const rows = orig.rows;
-#else
-  int const cols = static_cast<int>(orig.width());
-  int const rows = static_cast<int>(orig.height());
-#endif
-  int scale_factor = 16;
-  int blur_factor = 19;
-  if (cols < 2000) {
-    blur_factor = 11;
-    if (cols < 1000) {
-      scale_factor = 8;
-      blur_factor = (cols <= 500) ? 5 : 7;
-    }
-  }
 
-#ifdef USE_OPENCV
-  // TODO support colored images
-  cv::Mat gray(orig.size(), CV_8UC1);
-  cv::cvtColor(orig, gray, cv::COLOR_BGR2GRAY);
-  vgncorr::VignettingCorrection corr(gray, scale_factor, blur_factor);
-#else
-  vgncorr::VignettingCorrection corr(orig, scale_factor, blur_factor);
-#endif
+  auto const factors = VignettingCorrection::default_factors(orig);
+  vgncorr::VignettingCorrection corr(orig, factors);
   auto const out = corr.correct();
   auto out_path = path;
   out_path = out_path.replace(path.find("."), 1, "_corr.");
+ 
   ImageAlgo::save_image(out, out_path);
 
   return 0;

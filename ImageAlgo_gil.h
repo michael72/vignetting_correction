@@ -22,6 +22,7 @@ namespace imgalg {
 using Pixel = boost::gil::gray8_pixel_t;
 using PixelT = uint8_t;
 using PixelOrig = boost::gil::rgb8_pixel_t;
+using PixelOut = PixelOrig;
 using Img = boost::gil::image<Pixel>;
 using ImgOrig = boost::gil::image<PixelOrig>;
 using ImgView = boost::gil::image<Pixel>::const_view_t;
@@ -36,6 +37,11 @@ class ImageAlgoBase {
   static Size dimensions(V const &v) {
     return v.dimensions();
   }
+  template <typename V> 
+  static int num_channels(V const &v) {
+    return boost::gil::num_channels<ImgViewOrig>::value;
+  }
+
   static Size create_img(Size const &size) { return size; }
 
   template <typename P, typename V>
@@ -48,7 +54,7 @@ class ImageAlgoBase {
     return img.row_begin(row);
   }
 
-  static Img scaled_down(ImgViewOrig const &input_image, int const SF) {
+  static Img scaled_down_gray(ImgViewOrig const &input_image, int const SF) {
     auto const &orig_dim = input_image.dimensions();
     auto const dim = Point{orig_dim.x / SF, orig_dim.y / SF};
     Img result(dim);

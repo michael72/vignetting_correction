@@ -145,11 +145,11 @@ Img GaussianBlur::blur(Img const& img, int radius, int n) {
 
   reduce(
       p, view(result), [](int const row) {},
-      [](auto& p, auto& row_it, int const col) {
+      [](auto &p, auto &row_it, int const col) {
 #ifdef USE_OPENCV
-	  row_it[col] = p.blurred[p.idx++];
+        row_it[col] = p.blurred[p.idx++];
 #else
-	  const_cast<PixelT&>(row_it[col][0]) = p.blurred[p.idx++];
+        const_cast<PixelT &>(row_it[col][0]) = p.blurred[p.idx++];
 #endif
       });
   return result;
