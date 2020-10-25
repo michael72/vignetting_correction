@@ -4,6 +4,7 @@
 #include <array>
 #include <chrono>
 #include <ciso646>
+#include <filesystem>
 #include <iostream>
 
 #include "GaussianBlur.h"
@@ -349,6 +350,10 @@ int main(int argc, char *argv[]) {
     return -1;
   }
   std::string const path = argv[1];
+  if (not std::filesystem::exists(path)) {
+	std::cerr << "File not found!\n";
+	return -1;
+  }
 
   ImgOrig orig;
   using namespace imgalg;
@@ -362,12 +367,12 @@ int main(int argc, char *argv[]) {
   int const rows = static_cast<int>(orig.height());
 #endif
   int scale_factor = 16;
-  int blur_factor = 29;
+  int blur_factor = 19;
   if (cols < 2000) {
-    blur_factor = 19;
+    blur_factor = 11;
     if (cols < 1000) {
       scale_factor = 8;
-      blur_factor = 7;
+      blur_factor = (cols <= 500) ? 5 : 7;
     }
   }
 
