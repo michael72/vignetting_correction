@@ -29,5 +29,7 @@ build.bat
 build\bin\vgncorr.exe <img-filename>
 ```
 
+If you want to use opencv library instead of the default boost gil, then execute the corresponding `configure_opencv` and `build_opencv` files.
+
 The resulting image is copied to the same folder.
 
