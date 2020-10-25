@@ -4,7 +4,7 @@
 #include <array>
 #include <chrono>
 #include <ciso646>
-#include <filesystem>
+#include <sys/stat.h>
 #include <iostream>
 
 #include "GaussianBlur.h"
@@ -358,7 +358,9 @@ int main(int argc, char *argv[]) {
     return -1;
   }
   std::string const path = argv[1];
-  if (not std::filesystem::exists(path)) {
+ 
+  struct stat buf;
+  if (stat(path.c_str(), &buf) != 0) {
 	std::cerr << "File not found!\n";
 	return -1;
   }
