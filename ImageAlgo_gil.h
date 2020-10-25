@@ -75,7 +75,7 @@ class ImageAlgoBase {
           buf += SF;
         }
       }
-      auto const average = [=](auto const &sum) { return imgalg::div_round(sum, SF2); };
+      auto const average = [=](auto const &sum) { return div_round(sum, SF2); };
       std::transform(block_sums.begin(), block_sums.end(), out, average);
     }
     return result;

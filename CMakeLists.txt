@@ -18,6 +18,7 @@ set ( SOURCE_FILES
 	  GaussianBlur.h
 	  GaussianBlur.cpp
 	  ImageAlgo.h 
+	  ImageAlgoBase.h
 	  ImageAlgo_gil.h
 	  ImageAlgo_opencv.h )
 
