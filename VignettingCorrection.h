@@ -25,7 +25,7 @@ class VignettingCorrection : public imgalg::ImageAlgo {
   static auto constexpr MaxAllowedBrightness = 255;
   static auto constexpr HistogramSize = MaxAllowedBrightness;
   
-  static auto constexpr DeltaStart = 4.f;
+  static auto constexpr DeltaStart = 1.f;
   static auto constexpr DeltaMinDivider =
       256;  // smallest delta is 1 / DeltaMinDivider
 

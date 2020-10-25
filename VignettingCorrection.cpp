@@ -191,7 +191,7 @@ void VignettingCorrection::_smooth_histogram(
 }
 
 Real VignettingCorrection::_calc_H(Poly const &poly) const {
-  static auto constexpr fact = Depth / static_cast<float>(log2i(Depth)) /
+  static auto constexpr fact = (Depth - 1) / static_cast<float>(log2i(Depth)) /
                                (MaxAllowedBrightness / 255.f);
 
   struct CalcH {
@@ -246,13 +246,12 @@ Real VignettingCorrection::_calc_entropy(
 }
 
 Poly VignettingCorrection::_calc_best_poly() const {
-  float delta = DeltaStart;
-  auto const mid = _center_of_mass();  // Point{input_image_.cols / 2,
-                                       // input_image_.rows / 2};
+  auto const mid = _center_of_mass();
   Poly::Coefficients best_coefficients = {0, 0, 0}, current_best = {0, 0, 0};
   auto H_min = _calc_H(Poly(best_coefficients, mid));
 
-  auto const chk_H = [&](int const coeff_idx, int const sign) -> bool {
+  // check the new coefficients are minimizing the H value
+  auto const chk_H = [&](int const coeff_idx, int const sign, float const delta) -> bool {
     auto coeff{best_coefficients};
     coeff[coeff_idx] += sign * delta;
     auto const poly = Poly{coeff, mid};
@@ -273,23 +272,28 @@ Poly VignettingCorrection::_calc_best_poly() const {
     return found_min;
   };
 
-  auto last_dir = 0;
-  while (delta * DeltaMinDivider > 1) {
+  auto walkback = 0;
+  float delta = DeltaStart;
+  auto const find_dir = [&]() {
     auto found_dir = 0;
     for (int idx : {0, 1, 2}) {
       for (int sign : {-1, 1}) {
-        auto dir = (idx + 1) * sign;
-        if (-dir != last_dir and chk_H(idx, sign)) {
-          // -dir != last_dir => do not walk the same way back again
+        if (auto const dir = (idx + 1) * sign;
+            dir != walkback and chk_H(idx, sign, delta)) {
+          // dir != walkback => do not walk the same way back again
           found_dir = dir;
         }
       }
     }
-    last_dir = found_dir;
-    if (found_dir) {
-      best_coefficients = current_best;
-    } else {
-      delta = delta / 2.f;
+    walkback = -found_dir;
+    return found_dir;
+  };
+  while (delta * DeltaMinDivider > 1) {
+    auto found_dir = find_dir();
+    if (found_dir) {	  
+	  best_coefficients = current_best;
+	} else {
+      delta /= 2;
     }
   }
 
