@@ -60,22 +60,23 @@ class ImageAlgoBase {
     Img result(dim);
     Img gray(orig_dim);
     auto v = view(result);
-    copy_pixels(::boost::gil::color_converted_view<Pixel>(input_image),
-                view(gray));
+	auto g = view(gray);
+    copy_pixels(::boost::gil::color_converted_view<Pixel>(input_image), g);
     auto const [cols, rows] = dim;
-    auto static const SF2 = SF * SF;
+    auto const SF2 = SF * SF;
     for (int row = 0; row < rows; ++row) {
-      auto out = row_begin<Pixel>(v, row);
-      for (int col = 0; col < cols; ++col) {
-        auto sum = 0u;
-        for (int y = 0; y < SF; ++y) {
-          auto const &row_it = const_view(gray).row_begin(row * SF + y);
-          for (int x = 0; x < SF; ++x) {
-            sum += row_it[x + col * SF];
-          }
+      auto *out = row_begin<Pixel>(v, row);
+      auto block_sums = std::vector<int>(cols);
+      // cache-friendly optimization taking the whole rows
+      for (int y = 0; y < SF; ++y) {
+        auto const *buf = g.row_begin(row * SF + y);
+        for (auto& sum: block_sums) {
+          sum += std::accumulate(buf, &buf[SF], 0);
+          buf += SF;
         }
-        out[col] = (sum + SF2 / 2 - 1) / SF2;
       }
+      auto const average = [=](auto const &sum) { return div_round(sum, SF2); };
+      std::transform(block_sums.begin(), block_sums.end(), out, average);
     }
     return result;
   }

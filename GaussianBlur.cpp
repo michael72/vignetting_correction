@@ -8,19 +8,6 @@
 using namespace imgalg;
 using namespace std;
 
-constexpr static int iround(float const f) {
-  // only works for positive f
-  return static_cast<int>(f + 0.5f);
-}
-
-constexpr static int iround(int const i) { return i; }
-
-constexpr static PixelT clamp(int const i) {
-  return static_cast<PixelT>(((0xff - i) >> 31) | (i & ~(i >> 31)));
-}
-
-constexpr static PixelT clamp(float const f) { return clamp(iround(f)); }
-
 // gaussian blur algorithm by Ivan Kutskir
 // http://blog.ivank.net/fastest-gaussian-blur.html
 
@@ -44,7 +31,7 @@ static vector<int> boxesForGauss(int sigma,
   return sizes;
 }
 
-static void boxBlurH(vector<PixelT> const& scl, vector<PixelT>& tcl, int w,
+static void boxBlurH(PixelT const* scl, PixelT* tcl, int w,
                      int h, int r) {
   float const iarr = 1.f / (2 * r + 1);
   for (auto i = 0; i < h; i++) {
@@ -69,7 +56,7 @@ static void boxBlurH(vector<PixelT> const& scl, vector<PixelT>& tcl, int w,
   }
 }
 
-static void boxBlurT(vector<PixelT> const& scl, vector<PixelT>& tcl, int w,
+static void boxBlurT(PixelT const* scl, PixelT* tcl, int w,
                      int h, int r) {
   float const iarr = 1.f / (2 * r + 1);
   for (auto i = 0; i < w; i++) {
@@ -101,9 +88,8 @@ static void boxBlurT(vector<PixelT> const& scl, vector<PixelT>& tcl, int w,
   }
 }
 
-static void boxBlur(vector<PixelT>& scl, vector<PixelT>& tcl, int w, int h,
-                    int r) {
-  tcl = scl;
+static void boxBlur(PixelT* scl, PixelT* tcl, int w, int h, int r) {
+  memcpy(tcl, scl, w * h * sizeof(PixelT));
   boxBlurH(tcl, scl, w, h, r);
   boxBlurT(scl, tcl, w, h, r);
 }
@@ -112,11 +98,13 @@ vector<PixelT> gaussBlur(vector<PixelT> const& source, int w, int h, int radius,
                          int n) {
   auto scl = source;
   auto tcl = vector<PixelT>(source.size());
+  auto *pscl = &scl[0];
+  auto *ptcl = &tcl[0];
 
   auto bxs = boxesForGauss(radius, n);
-  boxBlur(scl, tcl, w, h, (bxs[0] - 1) / 2);
-  boxBlur(tcl, scl, w, h, (bxs[1] - 1) / 2);
-  boxBlur(scl, tcl, w, h, (bxs[2] - 1) / 2);
+  boxBlur(pscl, ptcl, w, h, (bxs[0] - 1) / 2);
+  boxBlur(ptcl, pscl, w, h, (bxs[1] - 1) / 2);
+  boxBlur(pscl, ptcl, w, h, (bxs[2] - 1) / 2);
 
   return tcl;
 }

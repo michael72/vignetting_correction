@@ -16,6 +16,23 @@ using namespace imgalg;
 static auto constexpr DebugPrint = false;
 static auto constexpr MeasureTime = true;
 
+constexpr float log2f(float val) {
+  union {
+    float val;
+    int32_t x;
+  } u = {val};
+  auto const log_2i = (((u.x >> 23) & 255) - 128);
+  u.x = (u.x & ~(255 << 23)) + (127 << 23);
+  return log_2i + ((-0.34484843f) * u.val + 2.02466578f) * u.val - 0.67487759f;
+}
+
+constexpr int log2i(int const val) {
+  if (val == 1) {
+    return 0;
+  }
+  return 1 + log2i(val / 2);
+}
+
 /// Polynomial to calculate the vignetting correction with.
 /// This is of the form:
 /// g_a,b,c(r) = 1 + ar^2 + br^4 + cr^6.
@@ -174,8 +191,8 @@ void VignettingCorrection::_smooth_histogram(
 }
 
 Real VignettingCorrection::_calc_H(Poly const &poly) const {
-  static auto const fact =
-      (Depth - 1) / log2f(Depth) / (MaxAllowedBrightness / 256.f);
+  static auto constexpr fact = (Depth - 1) / static_cast<float>(log2i(Depth)) /
+                               (MaxAllowedBrightness / 256.f);
 
   struct CalcH {
     CalcH() { memset(histogram, 0, sizeof(histogram)); }
@@ -189,16 +206,17 @@ Real VignettingCorrection::_calc_H(Poly const &poly) const {
     auto const g = poly.calc_at(col);
 
     auto const log_img = fact * log2f(1 + g * row_it[col]);
-    auto k_lower = static_cast<unsigned>(log_img);
-    auto k_upper = k_lower + 1;
-    if (k_lower >= MaxAllowedBrightness) {
-      return false;
+	if (auto const k_lower =
+		static_cast<unsigned>(log_img); k_lower < MaxAllowedBrightness) {
+      // add discrete histogram value for actual floating point
+      // example: 86.1 is to 0.9 in 86 and to 0.1 in 87
+      auto const k = static_cast<HistogramType>(log_img) - k_lower;
+      auto *hist = &c.histogram[k_lower];
+      hist[0] += 1 - k;
+      hist[1] += k;
+      return true;
     }
-    // add discrete histogram value for actual floating point
-    // example: 86.1 is to 0.9 in 86 and to 0.1 in 87
-    c.histogram[k_lower] += (k_upper - static_cast<HistogramType>(log_img));
-    c.histogram[k_upper] += (log_img - static_cast<HistogramType>(k_lower));
-    return true;
+    return false;
   };
   if (auto const result = reduce<CalcH>(
           c, const_view(input_image_),
@@ -326,9 +344,7 @@ ImgOrig VignettingCorrection::correct() {
       auto &pix_out = output_it[col];
       auto const &pix_in = row_it[col];
       for (int i = 0; i < nc; ++i) {
-        pix_out[i] = std::clamp<int>(
-            static_cast<int>((g * pix_in[i] / MaxBrightnessFactor) + 0.5f), 0,
-            255);
+		pix_out[i] = clamp(g * pix_in[i] / MaxBrightnessFactor);
       }
     }
   }
