@@ -27,7 +27,7 @@ class VignettingCorrection : public imgalg::ImageAlgo {
   
   static auto constexpr DeltaStart = 1.f;
   static auto constexpr DeltaMinDivider =
-      256;  // smallest delta is 1 / DeltaMinDivider
+      1024;  // smallest delta is 1 / DeltaMinDivider
 
   static auto constexpr HistogramSmoothFactor = 16;
 
