@@ -249,6 +249,9 @@ Poly VignettingCorrection::_calc_best_poly() const {
   auto const mid = _center_of_mass();
   Poly::Coefficients best_coefficients = {0, 0, 0}, current_best = {0, 0, 0};
   auto H_min = _calc_H(Poly(best_coefficients, mid));
+  if constexpr (DebugPrint) {
+    std::cout << "Hmin " << H_min << " @ (0, 0, 0) " << std::endl;
+  }
 
   // check the new coefficients are minimizing the H value
   auto const chk_H = [&](int const coeff_idx, int const sign, float const delta) -> bool {
@@ -258,13 +261,12 @@ Poly VignettingCorrection::_calc_best_poly() const {
     auto found_min = false;
 
     if (poly.is_increasing()) {
-      auto const H = _calc_H(poly);
-      if (H < H_min) {
+      if (auto const H = _calc_H(poly); H < H_min) {
         current_best = coeff;
         H_min = H;
         if constexpr (DebugPrint) {
-          std::cout << "amin " << coeff[0] << ", bmin " << coeff[1] << ", cmin "
-                    << coeff[2] << ", Hmin " << H_min << std::endl;
+          std::cout << "Hmin " << H_min << " @ (" << coeff[0] << ", " << coeff[1] << ", "
+                    << coeff[2] << ")" << std::endl;
         }
         found_min = true;
       }
@@ -288,7 +290,7 @@ Poly VignettingCorrection::_calc_best_poly() const {
     walkback = -found_dir;
     return found_dir;
   };
-  while (delta * DeltaMinDivider > 1) {
+  while (delta * DeltaMinDivider >= 1) {
     auto found_dir = find_dir();
     if (found_dir) {	  
 	  best_coefficients = current_best;
