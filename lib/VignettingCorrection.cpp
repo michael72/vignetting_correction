@@ -365,33 +365,3 @@ Config VignettingCorrection::default_factors(imgalg::ImgOrig const &img) {
 }
 
 }  // namespace vgncorr
-
-int main(int argc, char *argv[]) {
-  using namespace vgncorr;
-  if (argc < 2) {
-    std::cerr << "Please provide a filename\n";
-    return -1;
-  }
-  std::string const path = argv[1];
- 
-  struct stat buf;
-  if (stat(path.c_str(), &buf) != 0) {
-	std::cerr << "File not found!\n";
-	return -1;
-  }
-
-  ImgOrig orig;
-  using namespace imgalg;
-
-  ImageAlgo::load_image(orig, path);
-
-  auto const factors = VignettingCorrection::default_factors(orig);
-  vgncorr::VignettingCorrection corr(orig, factors);
-  auto const out = corr.correct();
-  auto out_path = path;
-  out_path = out_path.replace(path.find("."), 1, "_corr.");
- 
-  ImageAlgo::save_image(out, out_path);
-
-  return 0;
-}

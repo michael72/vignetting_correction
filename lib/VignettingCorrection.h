@@ -1,21 +1,13 @@
 #pragma once
 
 #include "ImageAlgo.h"
+#include "vgncorr.h"
 
 namespace vgncorr {
 using Real = float;
 using HistogramType = Real;
 
 class Poly;
-
-struct Config {
-  // if scale or blur are 0 both values are determined automatically
-  int scale = 0;
-  int blur = 0;
-  int histogram_smoothing = 16;
-  float delta_start_divider = 1.f;
-  int delta_max_precision = 1024;
-};
 
 class VignettingCorrection : public imgalg::ImageAlgo {
  public:
