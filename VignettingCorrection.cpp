@@ -150,41 +150,42 @@ bool Poly::is_increasing() const {
   return false;
 }
 
-VignettingCorrection::VignettingCorrection(ImgOrig const &input_image, Factors const& factors)
-    : factors_(factors),
+VignettingCorrection::VignettingCorrection(ImgOrig const &input_image, Config const& factors)
+    : config_(factors),
 	input_image_orig_(const_view(input_image)),
       input_image_(
-          GaussianBlur::blur(scaled_down_gray(input_image_orig_, factors_.scale), factors_.blur)) {}
+          GaussianBlur::blur(scaled_down_gray(input_image_orig_, config_.scale), config_.blur)) {
+}
 
 VignettingCorrection::~VignettingCorrection() {}
 
-template <int SmoothRadius>
 void VignettingCorrection::_smooth_histogram(
-    HistogramType (&histogram)[HistogramSize + 1]) {
-  HistogramType histo_orig[HistogramSize + 2 * SmoothRadius];
+    HistogramType (&histogram)[HistogramSize + 1]) const {
+    auto const smooth_radius = config_.histogram_smoothing;
+  std::vector<HistogramType> histo_orig(HistogramSize + 2 * smooth_radius, 0);
 
   // add mirrored values at the edges
-  for (int i = 0; i < SmoothRadius; ++i) {
+  for (int i = 0; i < config_.histogram_smoothing; ++i) {
     // 0 -> 4, ... 3 -> 1
-    histo_orig[i] = histogram[SmoothRadius - i];
+    histo_orig[i] = histogram[smooth_radius - i];
     // 260 -> 254, 261 -> 253 ...
-    histo_orig[HistogramSize + SmoothRadius + i] =
+    histo_orig[HistogramSize + smooth_radius + i] =
         histogram[HistogramSize - 2 - i];
   }
-  memcpy(histo_orig + SmoothRadius, histogram,
+  memcpy(histo_orig.data() + smooth_radius, histogram,
          HistogramSize * sizeof(HistogramType));
 
-  auto constexpr factor_sum = square(SmoothRadius + 1);
+  auto const factor_sum = square(smooth_radius + 1);
   //  smooth the histogram
   for (int i = 0; i < HistogramSize; ++i) {
     HistogramType sum = 0;
     auto *orig = &histo_orig[i];
-    for (int j = 0; j < SmoothRadius; ++j) {
+    for (int j = 0; j < smooth_radius; ++j) {
       sum += (j + 1) * orig[j];
     }
-    sum += (SmoothRadius + 1) * orig[SmoothRadius];
-    for (int j = 0; j < SmoothRadius; ++j) {
-      sum += (SmoothRadius - j) * orig[SmoothRadius + j + 1];
+    sum += (smooth_radius + 1) * orig[smooth_radius];
+    for (int j = 0; j < smooth_radius; ++j) {
+      sum += (smooth_radius - j) * orig[smooth_radius + j + 1];
     }
     histogram[i] = sum / factor_sum;
   }
@@ -220,7 +221,7 @@ Real VignettingCorrection::_calc_H(Poly const &poly) const {
   };
   if (auto const result = reduce<CalcH>(
           c, const_view(input_image_),
-          [&poly](int const row) { poly.set_row(row); }, calc_pixel);
+          [&poly, this](int const row) { poly.set_row(row); }, calc_pixel);
       result) {
     return _calc_entropy(c.histogram);
   } else {
@@ -229,8 +230,8 @@ Real VignettingCorrection::_calc_H(Poly const &poly) const {
 }
 
 Real VignettingCorrection::_calc_entropy(
-    HistogramType (&histogram)[MaxAllowedBrightness + 1]) {
-  _smooth_histogram<HistogramSmoothFactor>(histogram);
+    HistogramType (&histogram)[MaxAllowedBrightness + 1]) const {
+  _smooth_histogram(histogram);
   float sum = 0;
   for (int i = 0; i < MaxAllowedBrightness; ++i) {
     sum += histogram[i];
@@ -275,7 +276,7 @@ Poly VignettingCorrection::_calc_best_poly() const {
   };
 
   auto walkback = 0;
-  float delta = DeltaStart;
+  float delta = config_.delta_start_divider;
   auto const find_dir = [&]() {
     auto found_dir = 0;
     for (int idx : {0, 1, 2}) {
@@ -290,7 +291,7 @@ Poly VignettingCorrection::_calc_best_poly() const {
     walkback = -found_dir;
     return found_dir;
   };
-  while (delta * DeltaMinDivider >= 1) {
+  while (delta * config_.delta_max_precision >= 1) {
     auto found_dir = find_dir();
     if (found_dir) {	  
 	  best_coefficients = current_best;
@@ -299,7 +300,7 @@ Poly VignettingCorrection::_calc_best_poly() const {
     }
   }
 
-  return Poly{best_coefficients, {mid.x * factors_.scale, mid.y * factors_.scale}};
+  return Poly{best_coefficients, {mid.x * config_.scale, mid.y * config_.scale}};
 }
 
 Point VignettingCorrection::_center_of_mass() const {
@@ -358,17 +359,9 @@ ImgOrig VignettingCorrection::correct() {
   return result;
 }
 
-Factors VignettingCorrection::default_factors(imgalg::ImgOrig const &img) {
-  auto const [cols, rows] = dimensions(img);
-  auto factors = Factors{16, 19};
-  if (cols < 2000) {
-    factors.blur = 11;
-    if (cols < 1000) {
-      factors.scale = 8;
-      factors.blur = (cols <= 500) ? 5 : 7;
-    }
-  }
-  return factors;
+Config VignettingCorrection::default_factors(imgalg::ImgOrig const &img) {
+  auto const [cols, _] = dimensions(img);
+  return Config{static_cast<int>(cols) / 100, static_cast<int>(cols) / 200};
 }
 
 }  // namespace vgncorr

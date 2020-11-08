@@ -34,6 +34,11 @@
 # Build directory
 build*/*
 bin/*
+out/*
+
+# VS directories
+.vs/*
+
 
 
 
