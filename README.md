@@ -20,13 +20,13 @@ On Ubuntu:
 ```shell
 ./configure.sh
 ./build.sh
-./build/bin/vgncorr <img-filename>
+./bin/vgncorr <img-filename>
 ```
 
 On Windows:
 ```shell
 build.bat
-build\bin\vgncorr.exe <img-filename>
+bin\vgncorr.exe <img-filename>
 ```
 
 If you want to use opencv library instead of the default boost gil, then execute the corresponding `configure_opencv` and `build_opencv` files.
