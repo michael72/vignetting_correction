@@ -13,8 +13,7 @@ void correct(Config const& config, std::string const& filename_in, std::string c
 
   ImageAlgo::load_image(orig, filename_in);
 
-  auto const factors = VignettingCorrection::default_factors(orig);
-  vgncorr::VignettingCorrection corr(orig, factors);
+  vgncorr::VignettingCorrection corr(orig, config);
   auto const out = corr.correct();
  
   ImageAlgo::save_image(out, filename_out);

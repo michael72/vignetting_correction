@@ -150,8 +150,8 @@ bool Poly::is_increasing() const {
   return false;
 }
 
-VignettingCorrection::VignettingCorrection(ImgOrig const &input_image, Config const& factors)
-    : config_(factors),
+VignettingCorrection::VignettingCorrection(ImgOrig const &input_image, Config const& config)
+    : config_(default_config(input_image, config)),
 	input_image_orig_(const_view(input_image)),
       input_image_(
           GaussianBlur::blur(scaled_down_gray(input_image_orig_, config_.scale), config_.blur)) {
@@ -359,9 +359,16 @@ ImgOrig VignettingCorrection::correct() {
   return result;
 }
 
-Config VignettingCorrection::default_factors(imgalg::ImgOrig const &img) {
+Config VignettingCorrection::default_config(imgalg::ImgOrig const &img, Config const& config) {
   auto const [cols, _] = dimensions(img);
-  return Config{static_cast<int>(cols) / 100, static_cast<int>(cols) / 200};
+  Config ret = config;
+
+  if (ret.blur == 0 or ret.scale == 0) {
+    ret.scale = cols < 2000 ? 8 : 16;
+    ret.blur = std::max(5, static_cast<int>(cols) / (ret.scale * 25));
+    std::cout << "scale = " << ret.scale << ", blur = " << ret.blur << "\n";
+  }
+  return ret;
 }
 
 }  // namespace vgncorr

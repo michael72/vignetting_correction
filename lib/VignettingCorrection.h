@@ -14,7 +14,7 @@ class VignettingCorrection : public imgalg::ImageAlgo {
   VignettingCorrection(imgalg::ImgOrig const &img, Config const& config);
   ~VignettingCorrection();
 
-  static Config default_factors(imgalg::ImgOrig const& img);
+  static Config default_config(imgalg::ImgOrig const& img, Config const& config);
 
   imgalg::ImgOrig correct();
   static auto constexpr Depth = 256;
