@@ -35,10 +35,7 @@
 build*/*
 bin/*
 out/*
+bin/*
 
 # VS directories
 .vs/*
-
-
-
-
